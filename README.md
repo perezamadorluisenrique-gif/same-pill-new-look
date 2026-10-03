@@ -56,7 +56,7 @@ npm test         # unit tests, Node 18+
 npm start        # serves on http://localhost:8080
 ```
 
-Pushing to `main` runs the tests and deploys to GitHub Pages.
+Pushing to `main` runs the tests and publishes the site to the `gh-pages` branch, which GitHub Pages serves.
 
 ## Ideas for next steps
 
