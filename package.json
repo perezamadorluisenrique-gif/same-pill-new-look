@@ -1,0 +1,11 @@
+{
+  "name": "same-pill-new-look",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Warns patients and caregivers when a refill comes from a different manufacturer and will look different.",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "start": "python3 -m http.server 8080"
+  }
+}
