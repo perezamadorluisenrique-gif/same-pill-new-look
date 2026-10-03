@@ -1,10 +1,13 @@
 name: probe
 on: { push: { branches: [probe] } }
+permissions: { contents: write }
 jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v5
       - run: |
+          exec > probe-out.txt 2>&1
           for u in \
             "https://rxnav.nlm.nih.gov/REST/ndcproperties.json?id=00378520905" \
             "https://rxnav.nlm.nih.gov/REST/rxcui/197361/properties.json" \
@@ -15,3 +18,6 @@ jobs:
             "https://rxnav.nlm.nih.gov/REST/drugs.json?name=amlodipine" ; do
             echo "=== $u"; curl -s -D - -o /tmp/b -H "Origin: https://perezamadorluisenrique-gif.github.io" "$u" | grep -i -E "^(HTTP|access-control|content-type)"; head -c 600 /tmp/b; echo; done
           echo "=== preflight"; curl -s -D - -o /dev/null -X OPTIONS -H "Origin: https://x.github.io" -H "Access-Control-Request-Method: GET" -H "Access-Control-Request-Headers: accept" "https://rxnav.nlm.nih.gov/REST/rxcui/197361/properties.json" | grep -i -E "^(HTTP|access-control)"
+      - run: |
+          git config user.name bot; git config user.email bot@example.com
+          git add probe-out.txt; git commit -m out; git push
