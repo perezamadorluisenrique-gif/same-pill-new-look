@@ -7,15 +7,25 @@ const RX = 'https://rxnav.nlm.nih.gov/REST';
 const FDA = 'https://api.fda.gov';
 const out = {};
 
+const errors = [];
 async function get(url) {
-  const res = await fetch(url, { headers: { Accept: 'application/json' } });
-  const body = res.status === 200 || res.status === 404 ? await res.json().catch(() => null) : null;
-  out[url] = { status: res.status, body };
-  return body;
+  try {
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    const text = await res.text();
+    let body = null;
+    try { body = JSON.parse(text); } catch { body = null; }
+    out[url] = { status: res.status, body };
+    await new Promise((r) => setTimeout(r, 120)); // stay well under the APIs' rate limits
+    return body;
+  } catch (e) {
+    errors.push(`${url}: ${e.message}`);
+    return null;
+  }
 }
 
 const concepts = (drugs) => (drugs?.drugGroup?.conceptGroup || []).flatMap((g) => g.conceptProperties || []);
 
+try {
 // Name search, brand mapping and every listed look for a few common medicines.
 const names = ['amlodipine', 'norvasc', 'omeprazole', 'levothyroxine', 'metformin', 'atorvastatin', 'lisinopril'];
 const picks = {
@@ -58,5 +68,6 @@ for (const r of rec?.results || []) {
   if (pk) await get(`${FDA}/drug/enforcement.json?search=openfda.package_ndc:%22${pk}%22+openfda.product_ndc:%22${ndc9}%22&limit=5`);
 }
 
-writeFileSync('test/fixtures/recorded.json', JSON.stringify({ recordedAt: new Date().toISOString(), responses: out }, null, 1));
+} catch (e) { errors.push('script: ' + e.stack); }
+writeFileSync('test/fixtures/recorded.json', JSON.stringify({ recordedAt: new Date().toISOString(), errors, responses: out }, null, 1));
 console.log('recorded', Object.keys(out).length, 'responses');
