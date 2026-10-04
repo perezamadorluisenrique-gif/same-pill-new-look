@@ -1,7 +1,7 @@
 // Records real NLM RxNav and openFDA responses into test/fixtures/recorded.json,
 // so tests run against what the APIs actually return. Run where those hosts are
 // reachable (the "Record fixtures" workflow does this on GitHub's runners).
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, mkdirSync } from 'node:fs';
 
 const RX = 'https://rxnav.nlm.nih.gov/REST';
 const FDA = 'https://api.fda.gov';
@@ -69,5 +69,6 @@ for (const r of rec?.results || []) {
 }
 
 } catch (e) { errors.push('script: ' + e.stack); }
+mkdirSync('test/fixtures', { recursive: true });
 writeFileSync('test/fixtures/recorded.json', JSON.stringify({ recordedAt: new Date().toISOString(), errors, responses: out }, null, 1));
 console.log('recorded', Object.keys(out).length, 'responses');
