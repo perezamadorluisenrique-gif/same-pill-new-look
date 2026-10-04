@@ -7,6 +7,9 @@
   'use strict';
 
   const RXNAV = 'https://rxnav.nlm.nih.gov/REST';
+  const OPENFDA = 'https://api.fda.gov';
+  const I18N = (typeof module === 'object' && module.exports) ? require('./i18n.js') : root.SPNL_I18N;
+  const EN = I18N.makeT('en');
 
   // FDA SPL color and shape codes (NCI Thesaurus) used by RxNav's COLOR and SHAPE properties.
   const COLOR_CODES = {
@@ -141,21 +144,31 @@
     return res.json();
   }
 
-  class NotFoundError extends Error {}
+  /** A lookup that found nothing. code is 'bad' (not an NDC) or 'notFound'. */
+  class NotFoundError extends Error {
+    constructor(code, vars) {
+      super(EN(code === 'bad' ? 'ndc.bad' : 'ndc.notFound', vars));
+      this.code = code;
+      this.vars = vars || {};
+    }
+  }
 
   /** Look up an NDC (typed or scanned) and return a full product record. */
   async function lookupNdc(raw, fetchFn) {
     const parsed = parseNdcInput(raw);
-    if (!parsed) throw new NotFoundError('That doesn’t look like an NDC. It is 10 or 11 digits, often written like 0378-5209-05.');
+    if (!parsed) throw new NotFoundError('bad');
     // Ask for every reading at once. A bare 10-digit number can match more than
     // one real product, so the caller gets every match to choose from.
-    const hits = await Promise.all(parsed.ids.map(async (id) => {
+    const settled = await Promise.allSettled(parsed.ids.map(async (id) => {
       const data = await getJson(fetchFn, `${RXNAV}/ndcproperties.json?id=${encodeURIComponent(id)}&ndcstatus=ALL`);
       const list = (data && data.ndcPropertyList && data.ndcPropertyList.ndcProperty) || [];
       return list.length ? (list.find((e) => e.ndcItem === id) || list.find((e) => e.splSetIdItem) || list[0]) : null;
     }));
+    // One failed reading shouldn't hide another that worked; only give up if all failed.
+    if (settled.every((r) => r.status === 'rejected')) throw settled[0].reason;
+    const hits = settled.map((r) => (r.status === 'fulfilled' ? r.value : null));
     const entries = hits.filter(Boolean).filter((e, i, all) => all.findIndex((x) => x.ndcItem === e.ndcItem) === i);
-    if (!entries.length) throw new NotFoundError(`No product with NDC ${raw} is listed in the NLM drug database. Check the number on the label and try again.`);
+    if (!entries.length) throw new NotFoundError('notFound', { ndc: String(raw).trim() });
     if (entries.length > 1) {
       const alternatives = await Promise.all(entries.map((e) => addNames(productFromEntry(e), fetchFn)));
       return Object.assign({}, alternatives[0], { alternatives });
@@ -209,20 +222,20 @@
     }
     const changes = [];
     if (a.colors.length && b.colors.length && !sameSet(a.colors, b.colors)) {
-      changes.push({ field: 'color', label: 'Color', before: a.colors.join(' and '), after: b.colors.join(' and ') });
+      changes.push({ field: 'color', before: a.colors, after: b.colors });
     }
     if (a.shape && b.shape && a.shape !== b.shape) {
-      changes.push({ field: 'shape', label: 'Shape', before: a.shape, after: b.shape });
+      changes.push({ field: 'shape', before: a.shape, after: b.shape });
     }
     if (normImprint(a.imprint) !== normImprint(b.imprint) && (a.imprint || b.imprint)) {
-      changes.push({ field: 'imprint', label: 'Imprint', before: a.imprint || 'none', after: b.imprint || 'none' });
+      changes.push({ field: 'imprint', before: a.imprint, after: b.imprint });
     }
     const sa = mm(a.size), sb = mm(b.size);
     if (sa && sb && Math.abs(sa - sb) >= 1) {
-      changes.push({ field: 'size', label: 'Size', before: a.size, after: b.size });
+      changes.push({ field: 'size', before: a.size, after: b.size });
     }
     if (a.score && b.score && a.score !== b.score) {
-      changes.push({ field: 'score', label: 'Score lines', before: scoreText(a.score), after: scoreText(b.score) });
+      changes.push({ field: 'score', before: a.score, after: b.score });
     }
     const missingLook = !(a.colors.length && b.colors.length && a.shape && b.shape);
     const makerChanged = a.labeler !== b.labeler;
@@ -232,18 +245,32 @@
     return { verdict: changes.length ? 'new-look' : 'new-maker-same-look', changes, makerChanged, missingLook };
   }
 
-  function scoreText(n) {
+  function scoreText(n, t) {
+    t = t || EN;
     const k = parseInt(n, 10);
-    if (!k || k <= 1) return 'no score line';
-    return k === 2 ? 'one score line' : `${k - 1} score lines`;
+    if (!k || k <= 1) return t('score.none');
+    return k === 2 ? t('score.one') : t('score.many', { n: k - 1 });
   }
 
-  function describeLook(p) {
+  /** "the pill's color and size are different", from the compare changes. */
+  function whatChanged(changes, t) {
+    t = t || EN;
+    const parts = changes.map((c) => c.field).filter((f) => f === 'color' || f === 'shape' || f === 'size').map((f) => t.word(f));
+    if (!parts.length) return t('result.newLook.whatOther');
+    if (parts.length === 1) return t('result.newLook.whatOne', { a: parts[0] });
+    if (parts.length === 2) return t('result.newLook.whatTwo', { a: parts[0], b: parts[1] });
+    return t('result.newLook.whatMany', { list: parts.slice(0, -1).join(', '), last: parts[parts.length - 1] });
+  }
+
+  const colorWords = (colors, t) => colors.map((c) => t.word(c)).join(t('look.and'));
+
+  function describeLook(p, t) {
+    t = t || EN;
     const bits = [];
-    if (p.colors.length) bits.push(p.colors.join(' and '));
-    if (p.shape) bits.push(p.shape);
-    let s = bits.join(', ') || 'appearance not listed';
-    if (p.imprint) s += `, marked “${p.imprint.replace(/;/g, ' / ')}”`;
+    if (p.colors.length) bits.push(colorWords(p.colors, t));
+    if (p.shape) bits.push(t.word(p.shape));
+    let s = bits.join(', ') || t('look.none');
+    if (p.imprint) s += ', ' + t('look.marked', { imprint: p.imprint.replace(/;/g, ' / ') });
     return s;
   }
 
@@ -258,22 +285,190 @@
   }
 
   /** The note a patient or caregiver can send to their pharmacy. */
-  function pharmacistNote(saved, refill, result, who) {
-    const whom = who ? ` for ${who}` : '';
-    const lines = [
-      `Hi, I picked up a refill${whom} and want to check it before taking it.`,
-      ``,
-      `Before: ${niceName(saved)} from ${saved.labeler || 'unknown maker'} (NDC ${format11(saved.ndc11) || saved.ndc10}), ${describeLook(saved)}.`,
-      `Now: ${niceName(refill)} from ${refill.labeler || 'unknown maker'} (NDC ${format11(refill.ndc11) || refill.ndc10}), ${describeLook(refill)}.`,
-      ``,
-    ];
-    if (result.verdict === 'different-medicine') {
-      lines.push('These do not seem to be the same medicine. Can you check this refill before I take any?');
-    } else {
-      lines.push('Can you confirm this is the same medicine and dose I was taking before?');
+  function pharmacistNote(saved, refill, result, who, t) {
+    t = t || EN;
+    const line = (key, p) => t(key, {
+      name: niceName(p), maker: p.labeler || t('note.unknownMaker'),
+      ndc: format11(p.ndc11) || p.ndc10, look: describeLook(p, t),
+    });
+    return [
+      t('note.hi', { who: who ? t('note.for', { who }) : '' }),
+      '',
+      line('note.before', saved),
+      line('note.now', refill),
+      '',
+      t(result.verdict === 'different-medicine' ? 'note.askDifferent' : 'note.askSame'),
+      '',
+      t('note.thanks'),
+    ].join('\n');
+  }
+
+  /* ---------- Searching by name ---------- */
+
+  const naturalCompare = (a, b) => a.localeCompare(b, 'en', { numeric: true, sensitivity: 'base' });
+
+  /**
+   * Search RxNorm by generic or brand name.
+   * Returns { options: [{ rxcui, name, tty, brand }], suggestions: [] }.
+   * Single-ingredient products come first, then combinations.
+   */
+  async function searchDrugs(query, fetchFn) {
+    const q = String(query || '').trim();
+    if (q.length < 2) return { options: [], suggestions: [] };
+    const data = await getJson(fetchFn, `${RXNAV}/drugs.json?name=${encodeURIComponent(q)}`);
+    const groups = (data && data.drugGroup && data.drugGroup.conceptGroup) || [];
+    const options = [];
+    for (const g of groups) {
+      if (!['SCD', 'SBD', 'GPCK', 'BPCK'].includes(g.tty)) continue;
+      for (const c of g.conceptProperties || []) {
+        const m = c.name.match(/\[([^\]]+)\]\s*$/);
+        options.push({ rxcui: c.rxcui, name: c.name, tty: g.tty, brand: m ? m[1] : '' });
+      }
     }
-    lines.push('', 'Thank you.');
-    return lines.join('\n');
+    const parts = (n) => (n.match(/ \/ /g) || []).length;
+    options.sort((a, b) => parts(a.name) - parts(b.name) || (a.brand ? 1 : 0) - (b.brand ? 1 : 0) || naturalCompare(a.name, b.name));
+    let suggestions = [];
+    if (!options.length) {
+      try {
+        const sp = await getJson(fetchFn, `${RXNAV}/spellingsuggestions.json?name=${encodeURIComponent(q)}`);
+        suggestions = (sp && sp.suggestionGroup && sp.suggestionGroup.suggestionList && sp.suggestionGroup.suggestionList.suggestion) || [];
+      } catch (e) { /* suggestions are optional */ }
+    }
+    return { options, suggestions };
+  }
+
+  /* ---------- Every listed look of a medicine ---------- */
+
+  /** What makes two products look the same: colors, shape and imprint. */
+  function lookKey(p) {
+    if (!p.colors.length && !p.shape && !p.imprint) return '';
+    return [[...p.colors].sort().join('+'), p.shape, normImprint(p.imprint)].join('|');
+  }
+
+  /**
+   * Every look that labelers have listed for a clinical drug (and its brands).
+   * Returns { rxcui, name, groups, makers, products, unlisted } where each group is
+   * { key, product, labelers, ndcs, brand } sorted by how many labelers use it.
+   */
+  async function getLooks(rxcui, fetchFn) {
+    const props = await getJson(fetchFn, `${RXNAV}/rxcui/${rxcui}/properties.json`);
+    const pr = (props && props.properties) || {};
+    const ids = [{ rxcui, brand: pr.tty === 'SBD' || pr.tty === 'BPCK' ? (pr.name.match(/\[([^\]]+)\]/) || [])[1] || '' : '' }];
+    if (pr.tty === 'SCD' || pr.tty === 'GPCK') {
+      try {
+        const rel = await getJson(fetchFn, `${RXNAV}/rxcui/${rxcui}/related.json?tty=SBD`);
+        for (const g of (rel && rel.relatedGroup && rel.relatedGroup.conceptGroup) || []) {
+          for (const c of g.conceptProperties || []) ids.push({ rxcui: c.rxcui, brand: (c.name.match(/\[([^\]]+)\]/) || [])[1] || '' });
+        }
+      } catch (e) { /* brands are a bonus */ }
+    }
+    const lists = await Promise.all(ids.map(async ({ rxcui: id, brand }, i) => {
+      let data;
+      try {
+        data = await getJson(fetchFn, `${RXNAV}/ndcproperties.json?id=${id}&ndcstatus=active`);
+      } catch (e) {
+        if (i === 0) throw e; // the medicine itself must load; its brands are optional
+        return [];
+      }
+      const list = (data && data.ndcPropertyList && data.ndcPropertyList.ndcProperty) || [];
+      return list.map((e) => Object.assign(productFromEntry(e), { brand, name: pr.name, clinicalName: pr.tty === 'SCD' ? pr.name : '', clinicalRxcui: pr.tty === 'SCD' ? rxcui : '' }));
+    }));
+    const products = lists.flat();
+    const byKey = new Map();
+    const makers = new Set();
+    let unlisted = 0;
+    for (const p of products) {
+      if (p.labeler) makers.add(p.labeler);
+      const key = lookKey(p);
+      if (!key) { unlisted++; continue; }
+      let g = byKey.get(key);
+      if (!g) { g = { key, product: p, labelers: [], ndcs: [], members: [], brand: '' }; byKey.set(key, g); }
+      if (p.labeler && !g.labelers.includes(p.labeler)) { g.labelers.push(p.labeler); g.members.push(p); }
+      g.ndcs.push(p.ndc11);
+      if (p.brand) g.brand = p.brand;
+      // Prefer a sample that has a size, for drawing.
+      if (!g.product.size && p.size) g.product = p;
+    }
+    const groups = [...byKey.values()].sort((a, b) => b.labelers.length - a.labelers.length || b.ndcs.length - a.ndcs.length);
+    for (const g of groups) {
+      g.labelers.sort(naturalCompare);
+      g.members.sort((x, y) => naturalCompare(x.labeler, y.labeler));
+    }
+    return { rxcui, name: pr.name || '', tty: pr.tty || '', groups, makers: makers.size, products: products.length, unlisted };
+  }
+
+  /* ---------- FDA recalls ---------- */
+
+  // "0378-1803" matches "NDC 0378-1803-77" and "00378-1803-10" but not "0378-18030".
+  function ndcPattern(ndc9) {
+    const [lab, prod] = String(ndc9).split('-');
+    if (!lab || !prod) return null;
+    return new RegExp(`(^|[^0-9])0*${lab.replace(/^0+/, '')}-0*${prod.replace(/^0+/, '')}(-|[^0-9]|$)`);
+  }
+
+  /**
+   * Recalls the FDA lists for this exact product code (labeler + product).
+   * openFDA tags a recall with every NDC on the label, so each record is
+   * checked against its own description before it counts.
+   * Returns { ongoing: [], past: [] } with the fields the app shows.
+   */
+  async function checkRecalls(product, fetchFn) {
+    const ndc9 = product.ndc9;
+    if (!ndc9) return { ongoing: [], past: [] };
+    const terms = [`openfda.product_ndc:%22${ndc9}%22`];
+    if (product.ndc10) terms.unshift(`openfda.package_ndc:%22${product.ndc10}%22`);
+    const url = `${OPENFDA}/drug/enforcement.json?search=${terms.join('+')}&limit=25`;
+    const res = await fetchFn(url, { headers: { Accept: 'application/json' } });
+    if (res.status === 404) return { ongoing: [], past: [] };
+    if (!res.ok) throw new Error(`openFDA answered ${res.status}`);
+    const data = await res.json();
+    const re = ndcPattern(ndc9);
+    const out = { ongoing: [], past: [] };
+    const seen = new Set();
+    for (const r of (data && data.results) || []) {
+      const text = `${r.product_description || ''} ${r.code_info || ''}`;
+      const tagged = (r.openfda && r.openfda.product_ndc) || [];
+      const mentionsAny = /\d{4,5}-\d{3,4}/.test(text);
+      const matches = re && re.test(text) ? true : (!mentionsAny && tagged.length === 1 && tagged[0] === ndc9);
+      if (!matches || seen.has(r.recall_number)) continue;
+      seen.add(r.recall_number);
+      const item = {
+        number: r.recall_number, status: r.status, classification: r.classification,
+        reason: r.reason_for_recall, lots: r.code_info, firm: r.recalling_firm,
+        started: r.recall_initiation_date, description: r.product_description,
+      };
+      (r.status === 'Ongoing' ? out.ongoing : out.past).push(item);
+    }
+    const byDate = (a, b) => String(b.started).localeCompare(String(a.started));
+    out.ongoing.sort(byDate);
+    out.past.sort(byDate);
+    return out;
+  }
+
+  /** "20241118" → a Date, for display. */
+  function fdaDate(s) {
+    const m = String(s || '').match(/^(\d{4})(\d{2})(\d{2})$/);
+    return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], 12)) : null;
+  }
+
+  /* ---------- Pharmacy share links ---------- */
+
+  /** A link that opens the side-by-side comparison of two NDCs. */
+  function shareUrl(base, from, to, note) {
+    const u = new URL(base);
+    u.search = '';
+    u.hash = '';
+    u.searchParams.set('from', String(from).trim());
+    u.searchParams.set('to', String(to).trim());
+    if (note && String(note).trim()) u.searchParams.set('note', String(note).trim().slice(0, 280));
+    return u.toString();
+  }
+
+  function parseShare(search) {
+    const q = new URLSearchParams(search || '');
+    const from = q.get('from'), to = q.get('to');
+    if (!from || !to || !parseNdcInput(from) || !parseNdcInput(to)) return null;
+    return { from, to, note: (q.get('note') || '').slice(0, 280) };
   }
 
   /* ---------- Pill drawing ---------- */
@@ -355,7 +550,7 @@
         text = `<text x="${cx}" y="${cy}" font-size="${fs}" text-anchor="middle" dominant-baseline="central" fill="${ink}" font-family="Atkinson Hyperlegible Mono, ui-monospace, monospace" font-weight="700">${esc(label)}</text>`;
       }
     }
-    const title = esc(`${describeLook(p)}${p.size ? `, ${p.size}` : ''}`);
+    const title = esc(`${describeLook(p, o.t)}${p.size ? `, ${p.size}` : ''}`);
     return `<svg class="pill" viewBox="0 0 ${W} ${H}" role="img" aria-label="${title}"><title>${title}</title>` +
       `<defs><clipPath id="${id}c">${clip}</clipPath>` +
       `<radialGradient id="${id}s" cx="35%" cy="30%" r="80%"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".18"/></radialGradient></defs>` +
@@ -375,9 +570,10 @@
   }
 
   const api = {
-    RXNAV, COLOR_CODES, SHAPE_CODES, parseNdcInput, format11, productFromEntry, lookupNdc,
-    addNames, compareProducts, describeLook, shortMaker, niceName, pharmacistNote, pillSvg,
-    relativeScales, scoreText, NotFoundError, esc,
+    RXNAV, OPENFDA, COLOR_CODES, SHAPE_CODES, PILL_FILL, parseNdcInput, format11, productFromEntry, lookupNdc,
+    addNames, compareProducts, describeLook, whatChanged, shortMaker, niceName, pharmacistNote, pillSvg,
+    relativeScales, scoreText, NotFoundError, esc, searchDrugs, getLooks, lookKey, checkRecalls, fdaDate,
+    shareUrl, parseShare, colorWords,
   };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.SPNL = api;

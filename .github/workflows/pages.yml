@@ -23,17 +23,33 @@ jobs:
           node-version: 22
       - run: npm test
 
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: test/screenshots/
+
   # GitHub Pages serves the gh-pages branch. Publish the site files there.
   deploy:
     if: github.ref == 'refs/heads/main'
-    needs: test
+    needs: [test, e2e]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
       - name: Collect site files
         run: |
           mkdir _site
-          cp index.html styles.css core.js examples.js app.js sw.js manifest.webmanifest icon.svg icon-*.png _site/
+          cp index.html styles.css i18n.js core.js examples.js example-data.json app.js sw.js manifest.webmanifest icon.svg icon-*.png _site/
           cp -r vendor _site/
           touch _site/.nojekyll
       - name: Publish to gh-pages

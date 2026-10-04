@@ -70,5 +70,5 @@ for (const r of rec?.results || []) {
 
 } catch (e) { errors.push('script: ' + e.stack); }
 mkdirSync('test/fixtures', { recursive: true });
-writeFileSync('test/fixtures/recorded.json', JSON.stringify({ recordedAt: new Date().toISOString(), errors, responses: out }, null, 1));
+writeFileSync('test/fixtures/recorded.json', JSON.stringify({ recordedAt: new Date().toISOString(), errors, responses: out }));
 console.log('recorded', Object.keys(out).length, 'responses');

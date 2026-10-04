@@ -4,8 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Same Pill, New Look</title>
-<meta name="description" content="Know before you open the bag. Same Pill, New Look tells you when a refill comes from a different manufacturer and will look different, so you can check with your pharmacist instead of skipping doses.">
+<meta name="description" content="Know before you open the bag. Same Pill, New Look tells you when a refill comes from a different manufacturer and will look different, so you can check with your pharmacist instead of skipping doses. In English and Spanish.">
 <meta name="theme-color" content="#1d3b4f">
+<meta property="og:title" content="Same Pill, New Look">
+<meta property="og:description" content="Your refill might look different. It can still be your medicine. Check before you open the bag.">
+<meta property="og:image" content="https://perezamadorluisenrique-gif.github.io/same-pill-new-look/icon-512.png">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -16,118 +19,38 @@
 </head>
 <body>
 <!--APP-START-->
+<a class="skip" href="#app">Skip to content</a>
 <header class="bar">
-  <button class="brand" id="go-home" type="button" aria-label="Same Pill, New Look, home">
+  <button class="brand" type="button" data-go="home" id="brand">
     <span class="brand-mark" aria-hidden="true"></span>
     <span>Same Pill, <em>New Look</em></span>
   </button>
-  <button class="ghost small" id="go-chart" type="button">Pill chart</button>
+  <div class="bar-actions">
+    <button class="ghost small" type="button" data-action="toggle-lang" id="lang-btn" lang="es">Español</button>
+    <button class="ghost small" type="button" data-action="toggle-menu" id="menu-btn" aria-expanded="false" aria-controls="menu">Menu</button>
+  </div>
+  <nav class="menu" id="menu" hidden></nav>
 </header>
 
-<div class="banner" id="example-banner" hidden>
-  <span><strong>Example mode.</strong> <span id="example-banner-text">You are looking at sample records. Nothing here is your own data.</span></span>
-  <button class="link" id="leave-example" type="button">Leave example</button>
-</div>
+<div class="banner" id="banner" hidden></div>
 
-<main id="app">
-  <!-- Home -->
-  <section id="view-home" class="view">
-    <div class="intro" id="intro">
-      <p class="eyebrow">For refills that look different</p>
-      <h1>Your refill might look different. It can still be your medicine.</h1>
-      <p class="lede">Pharmacies often switch generic makers without saying so. Save the medicines you take, then check each refill before you open it. If the pill will look different, you’ll know why and what to ask your pharmacist.</p>
-      <div class="row">
-        <button class="primary" id="start-add" type="button">Add my first medicine</button>
-        <button class="secondary" id="start-example" type="button">Try an example</button>
-      </div>
-      <p class="fact">After a heart attack, patients whose pills changed shape had <strong>66% higher odds</strong> of stopping their medicine. A color change raised the odds by 34%. <a href="https://doi.org/10.7326/M13-2381" target="_blank" rel="noopener">Kesselheim et al., Annals of Internal Medicine, 2014</a></p>
-    </div>
-
-    <div id="meds-block" hidden>
-      <div class="section-head">
-        <h2>My medicines</h2>
-        <button class="ghost small" id="add-more" type="button">Add a medicine</button>
-      </div>
-      <ul class="meds" id="meds"></ul>
-      <button class="primary wide" id="start-check" type="button">Check a refill</button>
-    </div>
-  </section>
-
-  <!-- Add or check: one form, two purposes -->
-  <section id="view-lookup" class="view" hidden>
-    <button class="back" type="button" data-back>Back</button>
-    <h1 id="lookup-title">Add a medicine</h1>
-    <p class="lede" id="lookup-lede">Type the NDC from the pharmacy label or the maker’s bottle, or scan its barcode.</p>
-
-    <form id="lookup-form" class="card form" novalidate>
-      <label for="ndc-input">NDC number</label>
-      <input id="ndc-input" name="ndc" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="0378-5209-05" aria-describedby="ndc-help">
-      <p class="help" id="ndc-help">The National Drug Code has 10 or 11 digits. On a pharmacy label it is often marked “NDC”.</p>
-      <div class="row scan-row">
-        <button class="secondary" id="scan-live" type="button" hidden>Scan with camera</button>
-        <label class="secondary file-btn" for="scan-photo" id="scan-photo-label">Scan a photo of the barcode</label>
-        <input id="scan-photo" type="file" accept="image/*" capture="environment" class="visually-hidden">
-      </div>
-      <div id="who-field">
-        <label for="who-input">Who takes it? <span class="muted">(optional, for caregivers)</span></label>
-        <input id="who-input" name="who" autocomplete="off" placeholder="Me">
-      </div>
-      <p class="error" id="lookup-error" role="alert" hidden></p>
-      <button class="primary wide" id="lookup-submit" type="submit">Look it up</button>
-      <p class="tiny" id="example-hint" hidden>Example NDCs: <button class="chip" type="button" data-fill></button></p>
-    </form>
-
-    <div id="choose-block" hidden>
-      <h2>Which one is on your label?</h2>
-      <p class="lede">That number matches more than one product. Pick the one whose maker matches your bottle.</p>
-      <ul class="choices" id="choices"></ul>
-    </div>
-
-    <div id="preview-block" hidden>
-      <div class="card product" id="preview"></div>
-      <div class="row">
-        <button class="primary" id="save-med" type="button">Save to my medicines</button>
-        <button class="ghost" id="discard-med" type="button">Not this one</button>
-      </div>
-    </div>
-  </section>
-
-  <!-- Result of a refill check -->
-  <section id="view-result" class="view" hidden>
-    <button class="back" type="button" data-back>Back</button>
-    <div id="result"></div>
-  </section>
-
-  <!-- Printable pill chart -->
-  <section id="view-chart" class="view" hidden>
-    <button class="back no-print" type="button" data-back>Back</button>
-    <div class="section-head">
-      <h1>Pill chart</h1>
-      <button class="secondary small no-print" id="print-chart" type="button">Print</button>
-    </div>
-    <p class="lede">What each saved medicine should look like right now. Keep a copy by the pill organizer and update it after each new-look refill.</p>
-    <div id="chart"></div>
-    <p class="tiny" id="chart-date"></p>
-  </section>
-</main>
+<main id="app" tabindex="-1" aria-live="polite"></main>
 
 <div class="scanner" id="scanner" hidden>
   <div class="scanner-inner">
     <video id="scanner-video" playsinline muted></video>
     <div class="scanner-frame" aria-hidden="true"></div>
-    <p>Point the camera at the barcode on the bottle.</p>
-    <button class="secondary" id="scanner-close" type="button">Cancel</button>
+    <p id="scanner-text"></p>
+    <button class="secondary" id="scanner-close" type="button"></button>
   </div>
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-<footer class="foot">
-  <p><strong>This app does not identify pills</strong> and does not replace your pharmacist. Appearance details come from what manufacturers report to the FDA, and they can be missing or out of date. If a pill doesn’t match what you expect, ask your pharmacist before you take it.</p>
-  <p>Your medicine list stays on this device. Only the NDC you look up is sent to the U.S. National Library of Medicine.</p>
-  <p class="tiny">Drug data from <a href="https://lhncbc.nlm.nih.gov/RxNav/" target="_blank" rel="noopener">NLM RxNav</a> and <a href="https://dailymed.nlm.nih.gov/" target="_blank" rel="noopener">DailyMed</a>. This product uses publicly available data from the U.S. National Library of Medicine (NLM), National Institutes of Health, Department of Health and Human Services; NLM is not responsible for the product and does not endorse or recommend this or any other product. <a href="https://github.com/perezamadorluisenrique-gif/same-pill-new-look" target="_blank" rel="noopener">Source code</a></p>
-</footer>
+<footer class="foot" id="foot"></footer>
+<div class="print-sheet" id="print-sheet" aria-hidden="true"></div>
 <!--APP-END-->
+<script src="i18n.js"></script>
 <script src="core.js"></script>
 <script src="examples.js"></script>
 <script src="app.js"></script>

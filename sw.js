@@ -1,6 +1,6 @@
 /* Offline shell for Same Pill, New Look. Drug lookups always go to the network. */
-const CACHE = 'spnl-v1';
-const SHELL = ['./', 'index.html', 'styles.css', 'core.js', 'examples.js', 'app.js', 'icon.svg', 'manifest.webmanifest'];
+const CACHE = 'spnl-v2';
+const SHELL = ['./', 'index.html', 'styles.css', 'i18n.js', 'core.js', 'examples.js', 'app.js', 'icon.svg', 'manifest.webmanifest', 'vendor/qrcode-generator-2.0.4.js'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -17,6 +17,6 @@ self.addEventListener('fetch', (e) => {
       const copy = res.clone();
       caches.open(CACHE).then((c) => c.put(e.request, copy));
       return res;
-    }).catch(() => caches.match(e.request).then((r) => r || caches.match('index.html')))
+    }).catch(() => caches.match(e.request, { ignoreSearch: true }).then((r) => r || caches.match('index.html')))
   );
 });

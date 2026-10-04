@@ -1,0 +1,31 @@
+name: Live check
+
+# Uses the deployed app against the real NLM and FDA APIs every day, and after
+# each deploy. A failure here means the live site or an API changed.
+on:
+  schedule:
+    - cron: '17 11 * * *'
+  workflow_run:
+    workflows: [Test and deploy]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      # Give GitHub Pages a moment to publish the new version.
+      - run: sleep 60
+        if: github.event_name == 'workflow_run'
+      - run: node test/smoke.mjs
