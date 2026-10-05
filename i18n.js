@@ -232,7 +232,7 @@
       'back': 'Back',
       'foot.notId': 'This app does not identify pills',
       'foot.notIdRest': ' and does not replace your pharmacist. Appearance details come from what manufacturers report to the FDA, and they can be missing or out of date. If a pill doesn’t match what you expect, ask your pharmacist before you take it.',
-      'foot.privacy': 'Your medicine list stays on this device. Only the product codes you look up are sent to the U.S. National Library of Medicine and the FDA.',
+      'foot.privacy': 'Your medicine list stays on this device. Only the product codes you look up are sent to the U.S. National Library of Medicine and the FDA. Visits are counted with GoatCounter, without cookies or personal data: it gets only the page address, never what you type or look up.',
       'foot.credits': 'Drug data from NLM RxNav, DailyMed and openFDA. This product uses publicly available data from the U.S. National Library of Medicine (NLM), National Institutes of Health, Department of Health and Human Services; NLM is not responsible for the product and does not endorse or recommend this or any other product.',
       'foot.source': 'Source code',
 
@@ -479,7 +479,7 @@
       'back': 'Atrás',
       'foot.notId': 'Esta aplicación no identifica pastillas',
       'foot.notIdRest': ' y no reemplaza a su farmacéutico. Los detalles del aspecto vienen de lo que los fabricantes reportan a la FDA y pueden faltar o estar desactualizados. Si una pastilla no se ve como espera, pregúntele a su farmacéutico antes de tomarla.',
-      'foot.privacy': 'Su lista de medicamentos se queda en este dispositivo. Solo los códigos de producto que busca se envían a la Biblioteca Nacional de Medicina de EE. UU. y a la FDA.',
+      'foot.privacy': 'Su lista de medicamentos se queda en este dispositivo. Solo los códigos de producto que busca se envían a la Biblioteca Nacional de Medicina de EE. UU. y a la FDA. Las visitas se cuentan con GoatCounter, sin cookies ni datos personales: solo recibe la dirección de la página, nunca lo que escribe o busca.',
       'foot.credits': 'Datos de medicamentos de NLM RxNav, DailyMed y openFDA. Este producto usa datos públicos de la Biblioteca Nacional de Medicina de EE. UU. (NLM), Institutos Nacionales de Salud, Departamento de Salud y Servicios Humanos; la NLM no es responsable del producto y no respalda ni recomienda este ni ningún otro producto.',
       'foot.source': 'Código fuente',
 

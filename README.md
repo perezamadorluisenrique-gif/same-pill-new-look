@@ -49,7 +49,7 @@ This app does not identify pills. NLM asks that its appearance data not be used 
 
 ## Privacy
 
-There is no account and no server. The medicine list lives in the browser's local storage on the device. Lookups go straight from the browser to `rxnav.nlm.nih.gov` and `api.fda.gov` and carry only a product code or drug name. Pharmacy links carry the two NDCs and the optional note in the URL, and nothing personal.
+There is no account and no server. The medicine list lives in the browser's local storage on the device. Lookups go straight from the browser to `rxnav.nlm.nih.gov` and `api.fda.gov` and carry only a product code or drug name. Pharmacy links carry the two NDCs and the optional note in the URL, and nothing personal. Visits are counted with [GoatCounter](https://www.goatcounter.com/) (`stats.js`): no cookies, nothing stored on the device, no personal data. It sends only the page path (never the query string, so shared links and anything typed stay private), the referring site and the screen width, and it is skipped when Do Not Track is on.
 
 ## How it works
 
