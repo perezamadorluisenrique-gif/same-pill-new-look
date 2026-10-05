@@ -50,7 +50,7 @@ jobs:
       - name: Collect site files
         run: |
           mkdir _site
-          cp index.html styles.css i18n.js core.js examples.js example-data.json app.js sw.js manifest.webmanifest icon.svg icon-*.png _site/
+          cp index.html styles.css i18n.js core.js examples.js example-data.json app.js stats.js sw.js manifest.webmanifest icon.svg icon-*.png _site/
           cp -r vendor _site/
           touch _site/.nojekyll
       - name: Publish to gh-pages
