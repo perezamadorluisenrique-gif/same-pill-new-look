@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Same Pill, New Look</title>
+<meta name="description" content="Know before you open the bag. Same Pill, New Look tells you when a refill comes from a different manufacturer and will look different, so you can check with your pharmacist instead of skipping doses. In English and Spanish.">
+<meta name="theme-color" content="#1d3b4f">
+<meta property="og:title" content="Same Pill, New Look">
+<meta property="og:description" content="Your refill might look different. It can still be your medicine. Check before you open the bag.">
+<meta property="og:image" content="https://perezamadorluisenrique-gif.github.io/same-pill-new-look/icon-512.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Mono:wght@400;700&family=Atkinson+Hyperlegible+Next:wght@400;600;800&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<!--APP-START-->
+<a class="skip" href="#app">Skip to content</a>
+<header class="bar">
+  <button class="brand" type="button" data-go="home" id="brand">
+    <span class="brand-mark" aria-hidden="true"></span>
+    <span>Same Pill, <em>New Look</em></span>
+  </button>
+  <div class="bar-actions">
+    <button class="ghost small" type="button" data-action="toggle-lang" id="lang-btn" lang="es">Español</button>
+    <button class="ghost small" type="button" data-action="toggle-menu" id="menu-btn" aria-expanded="false" aria-controls="menu">Menu</button>
+  </div>
+  <nav class="menu" id="menu" hidden></nav>
+</header>
+
+<div class="banner" id="banner" hidden></div>
+
+<main id="app" tabindex="-1" aria-live="polite"></main>
+
+<div class="scanner" id="scanner" hidden>
+  <div class="scanner-inner">
+    <video id="scanner-video" playsinline muted></video>
+    <div class="scanner-frame" aria-hidden="true"></div>
+    <p id="scanner-text"></p>
+    <button class="secondary" id="scanner-close" type="button"></button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<footer class="foot" id="foot"></footer>
+<div class="print-sheet" id="print-sheet" aria-hidden="true"></div>
+<!--APP-END-->
+<script src="i18n.js"></script>
+<script src="core.js"></script>
+<script src="examples.js"></script>
+<script src="app.js"></script>
+<script src="stats.js" defer></script>
+</body>
+</html>
