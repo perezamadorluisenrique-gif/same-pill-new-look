@@ -9,8 +9,9 @@ on:
 permissions:
   contents: write
 
+# Per-ref group: a pull request run must never cancel a main deploy.
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
