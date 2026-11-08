@@ -3,7 +3,7 @@
 Static PWA (no build step) that warns patients and caregivers when a refill comes from a different
 generic manufacturer and will look different. English and Spanish. Live:
 https://perezamadorluisenrique-gif.github.io/same-pill-new-look/
-Part of Hidden Problems Lab; project policy lives in `/mnt/project-files/autopilot/charter.md`.
+Part of Hidden Problems Lab; general rules are the owner's Claude project instructions.
 
 ## Commands
 | Job | Command |
