@@ -22,6 +22,7 @@ Part of Hidden Problems Lab; general rules are the owner's Claude project instru
 - Deploy: `pages.yml` tests and e2e on PRs and main; main force-pushes the site to `gh-pages` (the one allowed force-push). `smoke.yml` "Live check" runs daily and after each deploy.
 
 ## Rules
+- Public repo: never add a `Claude-Session:` trailer or any claude.ai link to commits, PR titles or PR bodies. This rule beats the default attribution guidance.
 - **Never identify a pill or give dosing advice.** Results say "new maker, confirm with your pharmacist". Any change to result wording gets a separate review.
 - Every user-facing string exists in English and Spanish.
 - Data stays on the device; no tracking.
